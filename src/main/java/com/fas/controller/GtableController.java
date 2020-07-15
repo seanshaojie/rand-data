@@ -1,11 +1,14 @@
 package com.fas.controller;
 
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.OutputStream;
 import java.util.List;
 
 import javax.servlet.http.HttpServletResponse;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -126,25 +129,48 @@ public class GtableController {
 		Gtable gtable=gtableService.getTableByGtid(gtid);
 		List<Gcolumn> list=gcolumnService.getColumnToRand(gtid);
 		String tablename=gtable.getTablename();
+		ByteArrayInputStream tempIn = null;
+		ByteArrayOutputStream outputStream = null;
+		OutputStream out = null;
 		try {
-			HSSFWorkbook wb = generateExcel.generate(list, gtable);
+			SXSSFWorkbook wb = generateExcel.generate(list, gtable);
 			// 输出Excel文件
 			OutputStream output = response.getOutputStream();
 			response.reset();
 			// 设置文件头
+
 			response.setHeader("Access-Control-Allow-Origin", "*");
 			response.setHeader("Access-Control-Allow-Credentials", "true");
 			response.setHeader("Access-Control-Allow-Methods", "POST,GET,PATCH,DELETE,PUT");
 			response.setHeader("Access-Control-Expose-Headers", "*");
 			response.setHeader("Content-Disposition",
-					"attchement;filename=" + new String((tablename+".xls").getBytes("gb2312"), "ISO8859-1"));
+					"attchement;filename=" + new String((tablename+".xlsx").getBytes("gb2312"), "ISO8859-1"));
 			response.setContentType("application/octet-stream;charset=UTF-8");// 定义输出类型
-			wb.write(output);
+			outputStream = new ByteArrayOutputStream();
+			wb.write(outputStream);
+			tempIn = new ByteArrayInputStream(outputStream.toByteArray());
+			response.setHeader("Content-Length", String.valueOf(tempIn.available()));
+			 out = response.getOutputStream();
+			byte[] buffer = new byte[1024];
+			int a;
+			while ((a = tempIn.read(buffer)) != -1) {
+				out.write(buffer, 0, a);
+			}
 			wb.close();
 			return "下载成功";
 		} catch (Exception e) {
 			e.printStackTrace();
 			return "文件生成失败！异常："+ e.getMessage();
+		}finally {
+			if(null!=out){
+				out.close();
+			}
+			if(null!=tempIn){
+				tempIn.close();
+			}
+			if(null!=outputStream){
+				outputStream.close();
+			}
 		}
 	}
 	@RequestMapping(value = "/gsql/{gtid}", method = RequestMethod.GET)

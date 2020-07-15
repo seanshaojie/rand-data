@@ -25,4 +25,11 @@
 		 	arealevel=#{arealevel} and areanum=#{areanum}
 		</where>
 	</select>
+
+    <select id="getAreaRand" parameterType="int" resultType="com.fas.entity.ChinaArea">
+        select
+        areapath
+        from china_area
+        where arealevel=#{arealevel} order by RANDOM() limit 5000
+    </select>
 </mapper>

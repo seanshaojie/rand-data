@@ -3,7 +3,11 @@ package com.fas.service;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.fas.entity.ChinaArea;
 
+import java.util.List;
+
 public interface ChinaAreaService extends IService<ChinaArea> {
 	//按行政级别和行政排列数获取对应的政行区域
-	ChinaArea getAreaByNum(int arealevel,int areanum);
+	ChinaArea getAreaByNum(int arealevel, int areanum);
+
+	List<ChinaArea> getAreaRand(int arealevel);
 }

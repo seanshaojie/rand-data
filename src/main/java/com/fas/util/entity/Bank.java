@@ -85,9 +85,9 @@ public class Bank {
     public String cibcard() {
     	return creditCard("cib");
     }
-    //全部银行卡号
+    //全部银行
     public String allcard() {
-        return creditCard("all");
+    	return creditCard("all");
     }
 
     private String creditCard(String creditCardType) {

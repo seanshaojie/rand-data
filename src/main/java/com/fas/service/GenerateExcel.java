@@ -4,9 +4,16 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.List;
 
+import com.fas.entity.ChinaArea;
+import org.apache.commons.compress.utils.Lists;
 import org.apache.poi.hssf.usermodel.HSSFRow;
 import org.apache.poi.hssf.usermodel.HSSFSheet;
 import org.apache.poi.hssf.usermodel.HSSFWorkbook;
+import org.apache.poi.xssf.streaming.SXSSFRow;
+import org.apache.poi.xssf.streaming.SXSSFSheet;
+import org.apache.poi.xssf.streaming.SXSSFWorkbook;
+import org.apache.poi.xssf.usermodel.XSSFSheet;
+import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
@@ -19,30 +26,39 @@ import com.fas.util.UploadFile;
 
 @Service
 public class GenerateExcel {
-	@Autowired 
+	@Autowired
 	private ChinaAreaService chinaareaService;
 	/*
 	 * 生成Excel
 	 */
-	public HSSFWorkbook generate(List<Gcolumn> collist,Gtable gtable){
-		HSSFWorkbook wb = new HSSFWorkbook();
+	public SXSSFWorkbook generate(List<Gcolumn> collist,Gtable gtable){
+		SXSSFWorkbook wb = new SXSSFWorkbook(100);
+		//保存详细地址的数据
+		List<ChinaArea> areaList=Lists.newArrayList();
 		String value="";
 		int nextInt=0;
 		boolean isrun=false;
 		Faker faker=new Faker();
 		// 根据页面index 获取sheet页
-		HSSFSheet sheet = wb.createSheet(gtable.getTablename());
-		HSSFRow head = sheet.createRow(0);
-		for(int i=0;i<collist.size();i++) {//循环生成条数
+		SXSSFSheet sheet = wb.createSheet(gtable.getTablename());
+/*
+		sheet.createFreezePane(0, 1, 0, 1);
+*/
+		sheet.trackAllColumnsForAutoSizing();
+		SXSSFRow head = sheet.createRow(0);
+		//循环生成列表头
+		for(int i=0;i<collist.size();i++) {
 			head.createCell(i).setCellValue(collist.get(i).getColumnname());
 		}
-		for(int i=0;i<gtable.getGeneratecount();i++) {//循环生成条数
-			// 创建HSSFRow对象
-			HSSFRow row = sheet.createRow(i + 1);
+		//循环生成条数
+		for(int i=0;i<gtable.getGeneratecount();i++) {
+			// SXSSFRow
+			SXSSFRow row = sheet.createRow(i + 1);
 			for(int j=0;j<collist.size();j++) {//所有列解析
 				Gcolumn gcolumn=collist.get(j);
 				String paratype=gcolumn.getParatype();
 				String funcname=gcolumn.getFuncname();
+
 				if(paratype.equalsIgnoreCase("system")) {//系统内方法
 					ParaBean bean=null;
 					if(gcolumn.getParams()!=null && !gcolumn.getParams().equals("") &&!funcname.equalsIgnoreCase("Expression.replaceStr"))bean=JsonUtil.JSON2Object(gcolumn.getParams());
@@ -57,7 +73,7 @@ public class GenerateExcel {
 						value=nextInt+"";
 					}
 					///////////////////////随机数字  end///////////////////////////
-					
+
 					///////////////////////人员信息  start///////////////////////////
 					if(funcname.equalsIgnoreCase("Name.fullName")) {value=faker.name().fullName();}
 					if(funcname.equalsIgnoreCase("PhoneNumber.randomMobile")) {value=faker.phoneNumber().randomMobile();}
@@ -77,9 +93,20 @@ public class GenerateExcel {
 					if(funcname.equalsIgnoreCase("Name.marriage")) {value=faker.name().marriage();}
 					if(funcname.equalsIgnoreCase("School.educational")) {value=faker.school().educational();}
 					///////////////////////人员信息  end///////////////////////////
-					
+
 					///////////////////////地区信息  start///////////////////////////
-					if(funcname.equalsIgnoreCase("Address.fullAddress")) {int areanum=faker.number().integerBetween(1, 547411);value=chinaareaService.getAreaByNum(5, areanum).getAreapath()+faker.address().fullAddress();}
+					if (funcname.equalsIgnoreCase("Address.fullAddress")) {
+						if(areaList.size() > 0 ){
+							value = areaList.get(0).getAreapath() + faker.address().fullAddress();
+							areaList.remove(0);
+						}else{
+							areaList = chinaareaService.getAreaRand(5);
+							value = areaList.get(0).getAreapath() + faker.address().fullAddress();
+							areaList.remove(0);
+						}
+/*						int areanum = faker.number().integerBetween(1, 547411);
+						value = chinaareaService.getAreaByNum(5, areanum).getAreapath() + faker.address().fullAddress();*/
+					}
 					if(funcname.equalsIgnoreCase("Address.cityName")) {value=faker.address().cityName();}
 					if(funcname.equalsIgnoreCase("Address.country")) {value=faker.address().country();}
 					if(funcname.equalsIgnoreCase("Address.county")) {value=faker.address().county();}
@@ -89,7 +116,7 @@ public class GenerateExcel {
 					if(funcname.equalsIgnoreCase("Address.latitude")) {value=faker.address().latitude();}
 					if(funcname.equalsIgnoreCase("Address.longitude")) {value=faker.address().longitude();}
 					///////////////////////地区信息  end/////////////////////////////
-					
+
 					///////////////////////随机日期时间  start///////////////////////////
 					try {
 						if(funcname.equalsIgnoreCase("DateAndTime.betweenDay"))value=dformate.format(faker.date().betweenDay(dformate.parse(bean.getStartdate()), dformate.parse(bean.getEnddate())))+"";
@@ -100,12 +127,12 @@ public class GenerateExcel {
 						e.printStackTrace();
 					}
 					///////////////////////随机日期时间  end///////////////////////////
-					
+
 					///////////////////////字符串  start///////////////////////////
 					if(funcname.equalsIgnoreCase("Expression.replaceStr")) {value=faker.expression().replaceStr(gcolumn.getParams());}
 					if(funcname.equalsIgnoreCase("Sentence.quotation")) {value=faker.sentence().neutral();}
 					///////////////////////字符串  end///////////////////////////
-					
+
 					///////////////////////网络  start///////////////////////////
 					if(funcname.equalsIgnoreCase("Internet.uuid")) {value=faker.internet().uuid();}
 					if(funcname.equalsIgnoreCase("Internet.ipV4Address")) {value=faker.internet().ipV4Address();}
@@ -114,11 +141,11 @@ public class GenerateExcel {
 					if(funcname.equalsIgnoreCase("Internet.password")) {value=faker.internet().password(bean.getMinvalue(), bean.getMaxvalue());}
 					if(funcname.equalsIgnoreCase("Internet.md5Password")) {value=faker.internet().md5Password(gcolumn.getParams());}
 					///////////////////////网络  end///////////////////////////
-					
+
 					///////////////////////金融  start///////////////////////////
 					if(funcname.equalsIgnoreCase("Bank.bankname")) {value=faker.bank().bankname();}
-					if(funcname.equalsIgnoreCase("Bank.allcard")) {value=faker.bank().allcard();}
 					if(funcname.equalsIgnoreCase("Bank.ccbcard")) {value=faker.bank().ccbcard();}
+					if(funcname.equalsIgnoreCase("Bank.allcard")) {value=faker.bank().allcard();}
 					if(funcname.equalsIgnoreCase("Bank.abccard")) {value=faker.bank().abccard();}
 					if(funcname.equalsIgnoreCase("Bank.bcmcard")) {value=faker.bank().bcmcard();}
 					if(funcname.equalsIgnoreCase("Bank.bshcard")) {value=faker.bank().bshcard();}
@@ -136,7 +163,7 @@ public class GenerateExcel {
 					if(funcname.equalsIgnoreCase("Bank.citiccard")) {value=faker.bank().citiccard();}
 					if(funcname.equalsIgnoreCase("Bank.cibcard")) {value=faker.bank().cibcard();}
 					///////////////////////金融  end///////////////////////////
-					
+
 					///////////////////////布尔型  start///////////////////////////
 					if(funcname.equalsIgnoreCase("Bool.bool")) {value=faker.bool().bool()+"";}
 					if(funcname.equalsIgnoreCase("Bool.yOrN")) {value=faker.bool().yOrN();}
@@ -156,12 +183,13 @@ public class GenerateExcel {
 					int ri=faker.number().integerBetween(0,list.length-1);
 					value=list[ri];
 				}
-				// 创建HSSFCell对象 设置单元格的值
+				// 创建SXSSFCell对象 设置单元格的值
 				row.createCell(j).setCellValue(value);
-				// 调整每一列宽度(自适应)
+/*				// 调整每一列宽度(自适应)
+				sheet.trackAllColumnsForAutoSizing();
 			    sheet.autoSizeColumn((short) j);
 			    // 解决自动设置列宽中文失效的问题(自适应)
-			    sheet.setColumnWidth(j, sheet.getColumnWidth(j) * 17 / 10);
+			    sheet.setColumnWidth(j, sheet.getColumnWidth(j) * 17 / 10);*/
 				value="";
 			}
 		}

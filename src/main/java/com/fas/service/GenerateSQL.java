@@ -5,6 +5,9 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.fas.entity.ChinaArea;
+import org.apache.commons.compress.utils.Lists;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import com.fas.entity.Gcolumn;
 import com.fas.entity.Gtable;
@@ -14,11 +17,16 @@ import com.fas.util.JsonUtil;
 import com.fas.util.UploadFile;
 @Service
 public class GenerateSQL {
+
+	@Autowired
+	private ChinaAreaService chinaareaService;
 	/*
 	 * 生成SQL列表
 	 */
 	public List<String> generate(List<Gcolumn> collist,Gtable gtable){
 		List<String> sqllist=new ArrayList<String>();
+		//保存详细地址的数据
+		List<ChinaArea> areaList= Lists.newArrayList();
 		String column="",value="",sql="";
 		int nextInt=0;
 		boolean isrun=false;
@@ -65,7 +73,19 @@ public class GenerateSQL {
 					///////////////////////人员信息  end///////////////////////////
 					
 					///////////////////////地区信息  start///////////////////////////
-					if(funcname.equalsIgnoreCase("Address.fullAddress")) {value=value+"'"+faker.address().fullAddress()+"',";}
+					if (funcname.equalsIgnoreCase("Address.fullAddress")) {
+						if(areaList.size() > 0 ){
+							value = value + "'" + areaList.get(0).getAreapath() + "',";
+							areaList.remove(0);
+						}else{
+							areaList = chinaareaService.getAreaRand(5);
+							value = value + "'" + areaList.get(0).getAreapath() + "',";
+							areaList.remove(0);
+						}
+/*
+						value = value + "'" + faker.address().fullAddress() + "',";
+*/
+					}
 					if(funcname.equalsIgnoreCase("Address.cityName")) {value=value+"'"+faker.address().cityName()+"',";}
 					if(funcname.equalsIgnoreCase("Address.country")) {value=value+"'"+faker.address().country()+"',";}
 					if(funcname.equalsIgnoreCase("Address.county")) {value=value+"'"+faker.address().county()+"',";}
